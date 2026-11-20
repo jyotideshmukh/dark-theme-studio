@@ -23,6 +23,14 @@ import {
   normalizeHex,
 } from '../utils/colorUtils'
 
+import {
+  fixPaletteAccessibility,
+} from '../engine/accessibilityEngine'
+
+import type {
+  AccessibilityFixResult,
+} from '../engine/accessibilityEngine'
+
 interface ThemeStore {
   lightPalette: ColorPalette
 
@@ -63,6 +71,9 @@ interface ThemeStore {
   regenerateDarkPalette: () => void
 
   resetPalette: () => void
+
+  fixDarkAccessibility:
+  () => AccessibilityFixResult
 }
 
 function mergePalette(
@@ -103,7 +114,7 @@ function createInitialState() {
 }
 
 export const useThemeStore =
-  create<ThemeStore>((set) => ({
+  create<ThemeStore>((set, get) => ({
 
     ...createInitialState(),
 
@@ -271,5 +282,44 @@ export const useThemeStore =
     resetPalette: () => {
       set(createInitialState())
     },
+
+fixDarkAccessibility: () => {
+
+  const state = get()
+
+  const lockedTokens =
+    Object.keys(
+      state.darkOverrides,
+    ) as ColorToken[]
+
+  const result =
+    fixPaletteAccessibility(
+      state.darkPalette,
+      lockedTokens,
+    )
+
+  if (
+    Object.keys(result.changes).length === 0
+  ) {
+    return result
+  }
+
+  const autoDarkPalette = {
+    ...state.autoDarkPalette,
+    ...result.changes,
+  }
+
+  set({
+    autoDarkPalette,
+
+    darkPalette: {
+      ...autoDarkPalette,
+      ...state.darkOverrides,
+    },
+  })
+
+  return result
+},
+
 
   }))
